@@ -8,26 +8,27 @@ PROJECT_DIR := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
 BUCKET = {{ cookiecutter.s3_bucket }}
 PROFILE = {{ cookiecutter.aws_profile }}
 PROJECT_NAME = {{ cookiecutter.repo_name }}
+MODULE_NAME = {{ cookiecutter.module_name }}
 PYTHON_INTERPRETER = {{ cookiecutter.python_interpreter }}
-
-ifeq (,$(shell which conda))
-HAS_CONDA=False
-else
-HAS_CONDA=True
-endif
+VIRTUALENV = {{ cookiecutter.virtualenv }}
+CONDA_EXE ?= {{ cookiecutter.conda_path }}
 
 #################################################################################
 # COMMANDS                                                                      #
 #################################################################################
 
-## Install Python Dependencies
-requirements: test_environment
+## Install or update Python Dependencies
+requirements: test_environment environment.lock requirements.lock
+
+requirements.lock: requirements.txt
+ifneq (conda, $(VIRTUALENV))
 	$(PYTHON_INTERPRETER) -m pip install -U pip setuptools wheel
 	$(PYTHON_INTERPRETER) -m pip install -r requirements.txt
+endif
 
 ## Make Dataset
 data: requirements
-	$(PYTHON_INTERPRETER) src/data/make_dataset.py data/raw data/processed
+	$(PYTHON_INTERPRETER) -m {{ cookiecutter.module_name }}.data.make_dataset data/raw data/processed
 
 ## Delete all compiled Python files
 clean:
@@ -36,7 +37,7 @@ clean:
 
 ## Lint using flake8
 lint:
-	flake8 src
+	flake8 {{ cookiecutter.module_name }}
 
 ## Upload Data to S3
 sync_data_to_s3:
@@ -54,16 +55,27 @@ else
 	aws s3 sync s3://$(BUCKET)/data/ data/ --profile $(PROFILE)
 endif
 
-## Set up python interpreter environment
-create_environment:
-ifeq (True,$(HAS_CONDA))
-		@echo ">>> Detected conda, creating conda environment."
-ifeq (3,$(findstring 3,$(PYTHON_INTERPRETER)))
-	conda create --name $(PROJECT_NAME) python=3
+environment.lock: environment.yml
+ifeq (conda, $(VIRTUALENV))
+	$(CONDA_EXE) env update -n $(PROJECT_NAME) -f $<
+	$(CONDA_EXE) env export -n $(PROJECT_NAME) -f $@
+	# pip install -e .  # uncomment for conda <= 4.3
 else
-	conda create --name $(PROJECT_NAME) python=2.7
+	$(error Unsupported Environment `$(VIRTUALENV)`. Use conda)
 endif
-		@echo ">>> New conda env created. Activate with:\nsource activate $(PROJECT_NAME)"
+
+## Set up virtual environment for this project
+create_environment:
+ifeq (conda,$(VIRTUALENV))
+	@echo ">>> Detected conda, creating conda environment."
+ifneq ("X$(wildcard ./environment.lock)","X")
+	$(CONDA_EXE) env create --name $(PROJECT_NAME) -f environment.lock
+else
+	@echo ">>> Creating lockfile from $(CONDA_EXE) environment specification."
+	$(CONDA_EXE) env create --name $(PROJECT_NAME) -f environment.yml
+	$(CONDA_EXE) env export --name $(PROJECT_NAME) -f environment.lock
+endif
+	@echo ">>> New conda env created. Activate with: 'conda activate $(PROJECT_NAME)'"
 else
 	$(PYTHON_INTERPRETER) -m pip install -q virtualenv virtualenvwrapper
 	@echo ">>> Installing virtualenvwrapper if not already intalled.\nMake sure the following lines are in shell startup file\n\
@@ -72,9 +84,23 @@ else
 	@echo ">>> New virtualenv created. Activate with:\nworkon $(PROJECT_NAME)"
 endif
 
-## Test python environment is setup correctly
+## Delete the virtual environment for this project
+delete_environment:
+ifeq (conda,$(VIRTUALENV))
+	@echo "Deleting conda environment."
+	$(CONDA_EXE) env remove -n $(PROJECT_NAME)
+endif
+
+
+## Test python environment is set-up correctly
 test_environment:
+ifeq (conda,$(VIRTUALENV))
+ifneq (${CONDA_DEFAULT_ENV}, $(PROJECT_NAME))
+	$(error Must activate `$(PROJECT_NAME)` environment before proceeding)
+endif
+endif
 	$(PYTHON_INTERPRETER) test_environment.py
+
 
 #################################################################################
 # PROJECT RULES                                                                 #
@@ -86,7 +112,7 @@ test_environment:
 # Self Documenting Commands                                                     #
 #################################################################################
 
-.DEFAULT_GOAL := help
+.DEFAULT_GOAL := show-help
 
 # Inspired by <http://marmelab.com/blog/2016/02/29/auto-documented-makefile.html>
 # sed script explained:
@@ -103,10 +129,23 @@ test_environment:
 # 	* print line
 # Separate expressions are necessary because labels cannot be delimited by
 # semicolon; see <http://stackoverflow.com/a/11799865/1968>
-.PHONY: help
-help:
-	@echo "$$(tput bold)Available rules:$$(tput sgr0)"
+.PHONY: show-help
+
+
+print-%  : ; @echo $* = $($*)
+
+HELP_VARS := PROJECT_NAME
+
+help-prefix:
+	@echo "To get started:"
+	@echo "  >>> $$(tput bold)make create_environment$$(tput sgr0)"
+	@echo "  >>> $$(tput bold)conda activate $(PROJECT_NAME)$$(tput sgr0)"
 	@echo
+	@echo "$$(tput bold)Project Variables:$$(tput sgr0)"
+
+show-help: help-prefix $(addprefix print-, $(HELP_VARS))
+	@echo
+	@echo "$$(tput bold)Available rules:$$(tput sgr0)"
 	@sed -n -e "/^## / { \
 		h; \
 		s/.*//; \
