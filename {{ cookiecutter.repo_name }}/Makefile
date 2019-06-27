@@ -27,7 +27,7 @@ ifneq (conda, $(VIRTUALENV))
 endif
 
 ## Make Dataset
-data: requirements
+data:
 	$(PYTHON_INTERPRETER) -m {{ cookiecutter.module_name }}.data.make_dataset data/raw data/processed
 
 ## Delete all compiled Python files
