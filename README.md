@@ -15,7 +15,7 @@ conda config --add channels conda-forge
 ```
 
 ``` bash
-conda install cookiecutter pytest mkdocs mkdocs-cinder
+conda install cookiecutter pytest mkdocs
 ```
 
 ## To start a new project, run
