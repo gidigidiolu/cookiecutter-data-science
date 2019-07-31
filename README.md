@@ -6,7 +6,8 @@ _A logical, reasonably standardized, but flexible project structure for doing an
 
 -----------
 
-- Python >= 3.5
+- Python >= 3.6
+- [Anaconda](https://www.anaconda.com/distribution/)
 - [Cookiecutter Python package](http://cookiecutter.readthedocs.org/en/latest/installation.html) >= 1.4.0
 
 ``` bash
@@ -14,7 +15,7 @@ conda config --add channels conda-forge
 ```
 
 ``` bash
-conda install cookiecutter
+conda install cookiecutter pytest mkdocs mkdocs-cinder
 ```
 
 ## To start a new project, run
@@ -75,14 +76,6 @@ The directory structure of your new project looks like this:
 │       └── visualize.py
 │
 └── tox.ini            <- tox file with settings for running tox; see tox.testrun.org
-```
-
-## Installing development requirements
-
------------
-
-```bash
-pip install -r requirements.txt
 ```
 
 ## Running the tests
