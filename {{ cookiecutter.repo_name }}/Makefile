@@ -35,6 +35,29 @@ clean:
 	find . -type f -name "*.py[co]" -delete
 	find . -type d -name "__pycache__" -delete
 
+## Delete all interim files
+clean_interim:
+	rm -rf data/interim/*
+
+## Delete all raw files
+clean_raw:
+	rm -f data/raw/*
+
+## Delete all processed files
+clean_processed:
+	rm -f data/processed/*
+
+## Delete all generated data
+clean_all:
+	rm -rf data/raw/*
+	rm -rf data/processed/*
+	rm -rf data/interim/*
+	rm -rf data/external/*
+	rm -rf models/*
+	rm -rf notebooks/*
+	rm -rf references/*
+	rm -rf reports/*
+
 ## Lint using flake8
 lint:
 	flake8 {{ cookiecutter.module_name }}
