@@ -25,6 +25,7 @@ dependencies:
   - jedi
   - joblib
   - jupyter
+  - jupyterlab
   - nb_conda
   - numpy
   - pandas
