@@ -88,4 +88,4 @@ make requirements
 
 --------
 
-Project based on the [cookiecutter data science project template](https://drivendata.github.io/cookiecutter-data-science/).
+Project based on the [cookiecutter data science project template](https://github.com/gidigidiolu/cookiecutter-data-science).
